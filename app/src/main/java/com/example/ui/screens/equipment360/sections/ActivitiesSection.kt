@@ -62,6 +62,7 @@ fun ActivitiesSection(
     onSelectWorkOrder: (WorkOrderEntity) -> Unit,
     onCreateNotification: () -> Unit,
     onStartInspection: () -> Unit,
+    onConfirmWork: (WorkOrderEntity) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedSubTab by remember(initialSubTab) { mutableIntStateOf(initialSubTab) }
@@ -100,7 +101,7 @@ fun ActivitiesSection(
 
         Column(modifier = Modifier.padding(16.dp)) {
             when (selectedSubTab) {
-                0 -> WorkOrdersSubSection(workOrders = workOrders, onSelectWorkOrder = onSelectWorkOrder)
+                0 -> WorkOrdersSubSection(workOrders = workOrders, onSelectWorkOrder = onSelectWorkOrder, onConfirmWork = onConfirmWork)
                 1 -> NotificationsSubSection(notifications = notifications, onCreateNotification = onCreateNotification)
                 2 -> InspectionsSubSection(inspections = inspections, onStartInspection = onStartInspection)
             }
@@ -111,7 +112,8 @@ fun ActivitiesSection(
 @Composable
 fun WorkOrdersSubSection(
     workOrders: List<WorkOrderEntity>,
-    onSelectWorkOrder: (WorkOrderEntity) -> Unit
+    onSelectWorkOrder: (WorkOrderEntity) -> Unit,
+    onConfirmWork: (WorkOrderEntity) -> Unit = {}
 ) {
     var filterStatus by remember { mutableStateOf("All") }
     val filters = listOf("All", "Open", "In Progress", "Completed")
@@ -216,6 +218,21 @@ fun WorkOrdersSubSection(
                                 Text(wo.plannedDate, fontSize = 12.sp, color = Color(0xFF94A3B8))
                             }
                             WorkCenterBadge(workCenter = wo.workCenter)
+                        }
+
+                        if (wo.status in listOf("REL", "PCNF")) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Button(
+                                onClick = { onConfirmWork(wo) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(40.dp)
+                                    .testTag("wo_confirm_work_btn_${wo.orderNumber}"),
+                                colors = ButtonDefaults.buttonColors(containerColor = SafetyAmber),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text("Confirm Work", color = Slate900, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }

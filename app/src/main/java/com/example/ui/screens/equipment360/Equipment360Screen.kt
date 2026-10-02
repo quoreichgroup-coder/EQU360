@@ -104,6 +104,7 @@ fun Equipment360Screen(
     onNavigateBack: () -> Unit,
     onNavigateToScanner: () -> Unit,
     onNavigateToVisualInspection: (String) -> Unit,
+    onNavigateToConfirmWork: (String) -> Unit = {},
     onNavigateToHome: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -480,7 +481,8 @@ fun Equipment360Screen(
                     initialSubTab = activitiesSubTab,
                     onSelectWorkOrder = { selectedWorkOrderForDetail = it },
                     onCreateNotification = { showCreateNotifDialog = true },
-                    onStartInspection = { showStartInspDialog = true }
+                    onStartInspection = { showStartInspDialog = true },
+                    onConfirmWork = { wo -> onNavigateToConfirmWork(wo.orderNumber) }
                 )
                 2 -> MaintenanceSection(
                     plans = uiState.plans,
@@ -566,6 +568,9 @@ fun Equipment360Screen(
                     scope.launch {
                         snackbarHostState.showSnackbar("Work Order ${wo.orderNumber} updated to $newStatus")
                     }
+                },
+                onConfirmWork = { wo ->
+                    onNavigateToConfirmWork(wo.orderNumber)
                 }
             )
         }

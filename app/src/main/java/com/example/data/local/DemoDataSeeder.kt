@@ -134,6 +134,18 @@ object DemoDataSeeder {
     )
 
     val workOrders = listOf(
+        WorkOrderEntity(
+            orderNumber = "WO 155704",
+            equipmentId = "121SC008",
+            description = "Vibrating Grizzly Inspection",
+            orderType = "PM02",
+            priority = "HIGH",
+            status = "REL",
+            plannedDate = "2026-10-02",
+            workCenter = "MECHANICAL",
+            assignedTechnician = "A. Sawadogo",
+            longText = "Perform mechanical inspection on vibrating grizzly 121SC008. Verify screen deck fasteners, exciter bearings temperature, clearance tolerances, and check lubrication (Planned 6.0 h)."
+        ),
         // 121SC008 Work Orders
         WorkOrderEntity(
             orderNumber = "WO-4001928",
@@ -491,6 +503,56 @@ object DemoDataSeeder {
             revision = "Rev 1.3",
             date = "2022-09-08",
             summary = "415V soft-starter schematics, RTD thermistor wiring, and DCS emergency trip loops."
+        )
+    )
+
+    val initialConfirmations = listOf(
+        com.example.data.model.JobConfirmationEntity(
+            clientConfirmationId = "CONF-DEMO-001",
+            remoteConfirmationId = "SAP-CONF-98412",
+            workOrder = "WO-4001844",
+            operation = "0010",
+            equipmentId = "121SC008",
+            equipmentName = "VIBRATING GRIZZLY 121SC008",
+            functionalLocation = "BI-PLN-CRU/CRS-003",
+            workCenter = "PREDICTIVE",
+            technicianId = "Elena Rostova",
+            workStart = "2026-10-02T08:00:00",
+            workFinish = "2026-10-02T12:00:00",
+            elapsedMinutes = 240,
+            actualWork = 3.0,
+            actualWorkUnit = "H",
+            completionType = "PARTIAL",
+            incompleteReason = "Additional vibration spectrum monitoring required",
+            workNote = "Baseline vibration spectrum recorded. Bearing DE vibration at 3.8 mm/s within limits.",
+            workPerformedFlags = "Inspection completed;Adjustment performed",
+            measurementsJson = "Vibration: 3.8 mm/s; Bearing Temp: 62 °C",
+            materialsJson = "",
+            syncStatus = "SYNCED",
+            createdAt = "2026-10-02T12:05:00"
+        ),
+        com.example.data.model.JobConfirmationEntity(
+            clientConfirmationId = "CONF-DEMO-002",
+            remoteConfirmationId = "SAP-CONF-98110",
+            workOrder = "WO-3998120",
+            operation = "0010",
+            equipmentId = "121SC008",
+            equipmentName = "VIBRATING GRIZZLY 121SC008",
+            functionalLocation = "BI-PLN-CRU/CRS-003",
+            workCenter = "MECHANICAL",
+            technicianId = "A. Sawadogo",
+            workStart = "2026-09-28T09:15:00",
+            workFinish = "2026-09-28T11:45:00",
+            elapsedMinutes = 150,
+            actualWork = 2.5,
+            actualWorkUnit = "H",
+            completionType = "FINAL",
+            workNote = "Discharge lip weldment gouged and re-welded with E7018 electrode. Stress relief inspect completed.",
+            workPerformedFlags = "Component replaced;Inspection completed",
+            measurementsJson = "",
+            materialsJson = "Hardox 450 Liner Qty 1; Welding Rod E7018 Qty 5 KG",
+            syncStatus = "SYNCED",
+            createdAt = "2026-09-28T11:50:00"
         )
     )
 }

@@ -133,9 +133,79 @@ REVIEW & CONFIRM
 
 ---
 
-## 6. Pre-seeded Industrial Equipment
+## 6. Maintenance Job Confirmation (Field Execution UX)
 
-* `121SC008` — Vibrating Grizzly Feeder Screen (Scalping)
+PlantCare AI includes a technician-first **Job Confirmation** module designed for 30–60 second field confirmations without exposing complex SAP GUI terminology:
+
+```text
+SELECT JOB
+   ↓
+REVIEW WORK
+   ↓
+ENTER ACTUAL EXECUTION
+   ↓
+REVIEW
+   ↓
+CONFIRM
+```
+
+### Key Workflow Capabilities
+
+1. **Activities / "MY WORK" Screen**:
+   - Filter sections: `Today`, `Upcoming`, `In Progress`, `Waiting`, `Completed`.
+   - Native mobile cards replacing dense desktop tables.
+   - Shows WO number, status badge (`REL`, `PCNF`, `CNF`), description, equipment ID, functional location, work center, and planned hours (`Mechanical • 6.0 h`).
+   - One-tap `[ START JOB ]` and `[ CONFIRM WORK ]` actions.
+
+2. **Persistent Active Job Experience**:
+   - Starting a job automatically captures **Actual Start Date & Start Time** (e.g., `14:32`).
+   - Displays a persistent active card banner across the app with live elapsed timer (`CURRENT JOB: WO 155704 • Elapsed 01:24`).
+
+3. **Confirm Work — 4 Simple Sections**:
+   - **1. Job Context (Read-Only)**: WO, Operation (`0010`), Equipment, Functional Location (`BI-PLN-CRU/CRS-003`), Work Center (`MECHANICAL`).
+   - **2. Time**:
+     - Work Start (e.g., `14:32`) & Work Finish (e.g., `16:05`).
+     - **Calculated Elapsed Time** (e.g., `1 h 33 min`).
+   - **3. Actual Work**:
+     - Large numeric input (`[ 1.5 ] [ H ]`) with H / MIN unit toggle.
+     - Helper hint: `Suggested from elapsed time: 1.55 h`.
+     - **Independent Time Concept**: Work Finish - Work Start ≠ Actual Work. Active wrench time (e.g., 3.0 h) is strictly distinguished from access window / elapsed duration (e.g., 4.0 h) and is never silently overwritten.
+     - **Team Labor Architecture**: Supports multi-technician jobs (e.g., primary tech + additional co-workers with allocated hours and total labor calculation).
+   - **4. Work Performed & Field Evidence**:
+     - Quick checkboxes: `Inspection completed`, `Lubrication completed`, `Adjustment performed`, `Component replaced`, `Cleaning performed`.
+     - `Add work note` with 🎤 voice-to-text dictation simulation.
+     - Contextual measurements: Bearing Temperature (`68 °C`), Vibration (`4.2 mm/s`), Bearing Clearance (`0.08 mm`).
+     - Materials Used: Spare parts consumption (e.g., `Bearing 6208 Qty 2`, `Grease EP2 Qty 0.5 KG`) with `[ + Add Material ]`.
+     - Photo evidence: Before, During, After photo attachments.
+   - **5. Completion**:
+     - Simple question: `IS THE JOB COMPLETE?`
+     - `YES — Work Completed` (maps to Final confirmation in SAP PM, updating WO status to `CNF`).
+     - `NO — More Work Required` (maps to Partial confirmation, with quick reason chips: *Waiting for spare parts, Additional work identified, Equipment unavailable, Specialist required, Tools unavailable, Shift ended*).
+     - Follow-up work option: `Create Notification` or `Add Observation`, inheriting asset context.
+
+4. **Compact Pre-Submission Review & Success Screens**:
+   - Summary view with explicit `[ EDIT ]` and `[ CONFIRM WORK ]` actions.
+   - Success screen confirming WO, Operation, Actual Work, and timestamp with quick navigation to `[ VIEW WORK ORDER ]` or `[ NEXT JOB ]`.
+
+5. **Clean API Architecture & Offline Sync Queue**:
+   ```text
+   Compose UI ──► ConfirmationViewModel ──► ConfirmationRepository ──► Room DB (Local)
+                                                                            │
+                                                       (Sync Queue) ────────┘
+                                                            ▼
+                                                 PlantCare API Contract (POST /api/v1/confirmations)
+                                                            ▼
+                                                       SAP PM / EAM
+   ```
+   - **Idempotency Protection**: Uses device-generated `clientConfirmationId` (UUID) to prevent accidental duplicate confirmations.
+   - **Sync States**: `DRAFT`, `PENDING_SYNC` (*"Saved on device • Waiting to sync"*), `SYNCING`, `SYNCED`, `SYNC_FAILED` (*"Sync issue • Your confirmation is safely stored on this device [ Retry ]"*).
+   - **Confirmation History**: Displayed on Equipment 360° and Work Order Detail screens.
+
+---
+
+## 7. Pre-seeded Industrial Equipment
+
+* `121SC008` — Vibrating Grizzly Feeder Screen (Scalping) — Includes `WO 155704` (REL, Planned 6.0 h)
 * `CRU01` — Superior MKIII Gyratory Primary Crusher
 * `AF01` — Heavy Duty Apron Feeder
 * `CV04` — Overland Belt Conveyor 1200mm
@@ -145,14 +215,23 @@ REVIEW & CONFIRM
 
 ---
 
-## 7. Testing & Verification
+## 8. Testing & Verification
 
-Unit and local JVM tests using **Robolectric**:
+Unit and local JVM tests executed with **Robolectric**:
 
+* `ConfirmationValidationTest`: Validates required fields, work order presence, operation format, and non-negative actual work.
+* `ElapsedTimeCalculationTest`: Validates elapsed calculations (14:32 → 16:05 = 93 min, 08:00 → 12:00 = 240 min).
+* `ActualWorkIndependenceTest`: Validates that `Work Start = 08:00, Work Finish = 12:00 (Elapsed = 4.0h), Actual Work = 3.0h` is accepted and preserved without silent overwrite.
+* `OfflineConfirmationTest`: Validates that offline submissions succeed locally, store with `PENDING_SYNC`, update WO to `CNF`, and clear active jobs.
+* `ConfirmationSyncTest`: Validates queued record synchronization when connectivity is restored, updating status to `SYNCED` with remote SAP ID.
+* `DuplicateConfirmationTest`: Validates idempotency protection using `clientConfirmationId`.
+* `JobConfirmationEndToEndTest`: Validates full Critical User Journey (CUJ) online and offline.
 * `QrCodeParserTest`: Validates parsing of structured tags, URLs, JSON, and raw barcodes.
-* `EquipmentLookupTest`: Validates Room in-memory database queries, `getEquipment360` aggregation, work order status transitions, and notification insertions.
+* `EquipmentLookupTest`: Validates Room in-memory database queries and `getEquipment360` aggregation.
+* `VisualInspectionTest`: Validates AI visual inspection pipeline and fault inference.
 
 Run tests:
 ```bash
 gradle :app:testDebugUnitTest
 ```
+

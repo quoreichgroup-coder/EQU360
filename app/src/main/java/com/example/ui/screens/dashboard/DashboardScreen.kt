@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material.icons.filled.Engineering
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -58,7 +59,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.EquipmentEntity
+import com.example.data.repository.IConfirmationRepository
 import com.example.data.repository.IEquipmentRepository
+import com.example.ui.components.ActiveJobBanner
 import com.example.ui.components.StatusBadge
 import com.example.ui.components.WorkCenterBadge
 import com.example.ui.theme.SafetyAmber
@@ -71,11 +74,15 @@ import com.example.ui.theme.StatusGreen
 @Composable
 fun DashboardScreen(
     repository: IEquipmentRepository,
+    confirmationRepository: IConfirmationRepository? = null,
     onNavigateToScanner: () -> Unit,
     onNavigateToEquipment: (String) -> Unit,
-    onNavigateToVisualInspection: (String) -> Unit = {}
+    onNavigateToVisualInspection: (String) -> Unit = {},
+    onNavigateToMyWork: () -> Unit = {},
+    onNavigateToConfirmWork: (String) -> Unit = {}
 ) {
     val allEquipments by repository.getAllEquipments().collectAsStateWithLifecycle(initialValue = emptyList())
+    val activeJob = confirmationRepository?.getActiveJob()?.collectAsStateWithLifecycle(initialValue = null)?.value
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategoryFilter by remember { mutableStateOf("All") }
@@ -139,13 +146,23 @@ fun DashboardScreen(
                 },
                 actions = {
                     IconButton(
+                        onClick = onNavigateToMyWork,
+                        modifier = Modifier.testTag("topbar_my_work_icon")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Engineering,
+                            contentDescription = "My Work",
+                            tint = SafetyAmber
+                        )
+                    }
+                    IconButton(
                         onClick = onNavigateToScanner,
                         modifier = Modifier.testTag("topbar_scan_icon")
                     ) {
                         Icon(
                             imageVector = Icons.Default.QrCodeScanner,
                             contentDescription = "Scan Equipment",
-                            tint = SafetyAmber
+                            tint = Color.White
                         )
                     }
                 },
@@ -177,6 +194,22 @@ fun DashboardScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // Active Job Banner if present
+            if (activeJob != null) {
+                item {
+                    val diffSec = maxOf(0L, (System.currentTimeMillis() - activeJob.startTimestamp) / 1000)
+                    val m = (diffSec % 3600) / 60
+                    val s = diffSec % 60
+                    val timerStr = String.format(java.util.Locale.US, "%02d:%02d", m, s)
+
+                    ActiveJobBanner(
+                        activeJob = activeJob,
+                        elapsedTimer = timerStr,
+                        onOpenJob = { onNavigateToConfirmWork(activeJob.workOrder) }
+                    )
+                }
+            }
+
             // Hero Scan Card (Prominent Call to Action)
             item {
                 Card(

@@ -47,7 +47,8 @@ import com.example.ui.theme.StatusGreen
 fun WorkOrderDetailDialog(
     workOrder: WorkOrderEntity,
     onDismiss: () -> Unit,
-    onUpdateStatus: (WorkOrderEntity, String) -> Unit
+    onUpdateStatus: (WorkOrderEntity, String) -> Unit,
+    onConfirmWork: (WorkOrderEntity) -> Unit = {}
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -220,6 +221,61 @@ fun WorkOrderDetailDialog(
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))
                         ) {
                             Text("Complete (TECO)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Prominent Field Action: Confirm Work (Requirement 2)
+                Button(
+                    onClick = {
+                        onDismiss()
+                        onConfirmWork(workOrder)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .testTag("dialog_btn_confirm_work"),
+                    colors = ButtonDefaults.buttonColors(containerColor = SafetyAmber),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Confirm Work", color = Slate900, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Confirmation History card (Requirement 34)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Slate800),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = "CONFIRMATION HISTORY",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = SafetyAmber,
+                            letterSpacing = 0.5.sp
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text("02 Oct 2026", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                Text("Operation 0010", fontSize = 10.sp, color = Color(0xFF94A3B8))
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Actual Work", fontSize = 10.sp, color = Color(0xFF94A3B8))
+                                Text("1.5 h", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SafetyAmber)
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text("A. Sawadogo", fontSize = 11.sp, color = Color.White)
+                                Text("Synced", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = StatusGreen)
+                            }
                         }
                     }
                 }

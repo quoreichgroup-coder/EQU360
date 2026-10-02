@@ -48,8 +48,14 @@ interface WorkOrderDao {
     @Query("SELECT * FROM work_orders WHERE UPPER(equipmentId) = UPPER(:equipmentId) ORDER BY plannedDate DESC")
     fun getWorkOrdersForEquipment(equipmentId: String): Flow<List<WorkOrderEntity>>
 
+    @Query("SELECT * FROM work_orders ORDER BY plannedDate DESC")
+    fun getAllWorkOrders(): Flow<List<WorkOrderEntity>>
+
     @Query("SELECT * FROM work_orders WHERE orderNumber = :orderNumber LIMIT 1")
     fun getWorkOrder(orderNumber: String): Flow<WorkOrderEntity?>
+
+    @Query("SELECT * FROM work_orders WHERE orderNumber = :orderNumber LIMIT 1")
+    suspend fun getWorkOrderById(orderNumber: String): WorkOrderEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWorkOrders(orders: List<WorkOrderEntity>)
@@ -122,4 +128,46 @@ interface TechnicalDocumentDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDocuments(documents: List<TechnicalDocumentEntity>)
+}
+
+@Dao
+interface JobConfirmationDao {
+    @Query("SELECT * FROM job_confirmations WHERE workOrder = :workOrder ORDER BY createdAt DESC")
+    fun getConfirmationsForWorkOrder(workOrder: String): Flow<List<com.example.data.model.JobConfirmationEntity>>
+
+    @Query("SELECT * FROM job_confirmations WHERE UPPER(equipmentId) = UPPER(:equipmentId) ORDER BY createdAt DESC")
+    fun getConfirmationsForEquipment(equipmentId: String): Flow<List<com.example.data.model.JobConfirmationEntity>>
+
+    @Query("SELECT * FROM job_confirmations ORDER BY createdAt DESC")
+    fun getAllConfirmations(): Flow<List<com.example.data.model.JobConfirmationEntity>>
+
+    @Query("SELECT * FROM job_confirmations WHERE syncStatus IN ('PENDING_SYNC', 'SYNC_FAILED') ORDER BY createdAt ASC")
+    suspend fun getPendingSyncConfirmations(): List<com.example.data.model.JobConfirmationEntity>
+
+    @Query("SELECT * FROM job_confirmations WHERE clientConfirmationId = :clientConfirmationId LIMIT 1")
+    suspend fun getConfirmationByClientId(clientConfirmationId: String): com.example.data.model.JobConfirmationEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertConfirmation(confirmation: com.example.data.model.JobConfirmationEntity)
+
+    @Update
+    suspend fun updateConfirmation(confirmation: com.example.data.model.JobConfirmationEntity)
+
+    @Query("UPDATE job_confirmations SET syncStatus = :status, remoteConfirmationId = :remoteId, syncErrorMessage = :error WHERE clientConfirmationId = :clientConfirmationId")
+    suspend fun updateSyncStatus(clientConfirmationId: String, status: String, remoteId: String? = null, error: String? = null)
+}
+
+@Dao
+interface ActiveJobDao {
+    @Query("SELECT * FROM active_jobs LIMIT 1")
+    fun getActiveJob(): Flow<com.example.data.model.ActiveJobEntity?>
+
+    @Query("SELECT * FROM active_jobs LIMIT 1")
+    suspend fun getActiveJobSync(): com.example.data.model.ActiveJobEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun setActiveJob(activeJob: com.example.data.model.ActiveJobEntity)
+
+    @Query("DELETE FROM active_jobs")
+    suspend fun clearActiveJob()
 }

@@ -26,9 +26,11 @@ import kotlinx.coroutines.launch
         InspectionEntity::class,
         DowntimeEventEntity::class,
         MaterialConsumptionEntity::class,
-        TechnicalDocumentEntity::class
+        TechnicalDocumentEntity::class,
+        com.example.data.model.JobConfirmationEntity::class,
+        com.example.data.model.ActiveJobEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -41,6 +43,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun downtimeDao(): DowntimeDao
     abstract fun materialConsumptionDao(): MaterialConsumptionDao
     abstract fun technicalDocumentDao(): TechnicalDocumentDao
+    abstract fun jobConfirmationDao(): JobConfirmationDao
+    abstract fun activeJobDao(): ActiveJobDao
 
     companion object {
         @Volatile
@@ -52,7 +56,8 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "plantcare_maintenance.db"
-                ).addCallback(object : Callback() {
+                ).fallbackToDestructiveMigration()
+                .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
                         CoroutineScope(Dispatchers.IO).launch {
@@ -84,6 +89,9 @@ abstract class AppDatabase : RoomDatabase() {
             db.downtimeDao().insertDowntimes(DemoDataSeeder.downtimeEvents)
             db.materialConsumptionDao().insertConsumptions(DemoDataSeeder.spareParts)
             db.technicalDocumentDao().insertDocuments(DemoDataSeeder.documents)
+            for (conf in DemoDataSeeder.initialConfirmations) {
+                db.jobConfirmationDao().insertConfirmation(conf)
+            }
         }
     }
 }

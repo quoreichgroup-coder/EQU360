@@ -29,6 +29,7 @@ interface IEquipmentRepository {
     fun getEquipment(equipmentId: String): Flow<EquipmentEntity?>
     suspend fun getEquipmentSync(equipmentId: String): EquipmentEntity?
     fun searchEquipments(query: String): Flow<List<EquipmentEntity>>
+    fun getAllWorkOrders(): Flow<List<WorkOrderEntity>>
     fun getWorkOrders(equipmentId: String): Flow<List<WorkOrderEntity>>
     fun getNotifications(equipmentId: String): Flow<List<MaintenanceNotificationEntity>>
     fun getMaintenancePlans(equipmentId: String): Flow<List<MaintenancePlanEntity>>
@@ -119,6 +120,10 @@ class EquipmentRepository(
 
     override fun searchEquipments(query: String): Flow<List<EquipmentEntity>> {
         return database.equipmentDao().searchEquipments(query).flowOn(ioDispatcher)
+    }
+
+    override fun getAllWorkOrders(): Flow<List<WorkOrderEntity>> {
+        return database.workOrderDao().getAllWorkOrders().flowOn(ioDispatcher)
     }
 
     override fun getWorkOrders(equipmentId: String): Flow<List<WorkOrderEntity>> {
