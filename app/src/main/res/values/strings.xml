@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">PlantCare AI</string>
+    <string name="scan_equipment">Scan Equipment</string>
+    <string name="equipment_360">Equipment 360°</string>
+    <string name="search_equipment">Search Equipment</string>
+    <string name="equipment_not_found">Equipment not found</string>
+    <string name="scan_instruction">Align the equipment QR code inside the frame</string>
+    <string name="create_notification">Create Notification</string>
+    <string name="start_inspection">Start Inspection</string>
+    <string name="view_pm_checklist">View PM Checklist</string>
+    <string name="add_photo">Add Photo</string>
+    <string name="ai_assistant">AI Assistant</string>
+</resources>

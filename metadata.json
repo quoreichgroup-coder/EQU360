@@ -1,0 +1,6 @@
+{
+  "name": "PlantCare AI",
+  "description": "Industrial plant equipment maintenance intelligence with QR & barcode scanning, Equipment 360° dashboard, work orders, preventive maintenance, inspections, downtime tracking, spare parts, and AI assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
