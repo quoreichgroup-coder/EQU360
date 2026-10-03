@@ -102,18 +102,23 @@ class MyWorkViewModel(
         _selectedTab.value = tab
     }
 
+    suspend fun startJobSync(workOrder: WorkOrderEntity): ActiveJobEntity {
+        val active = confirmationRepo.startJob(
+            workOrder = workOrder.orderNumber,
+            equipmentId = workOrder.equipmentId,
+            equipmentName = "VIBRATING GRIZZLY 121SC008",
+            functionalLocation = "BI-PLN-CRU/CRS-003",
+            workCenter = workOrder.workCenter,
+            technicianId = workOrder.assignedTechnician.ifBlank { "A. Sawadogo" }
+        )
+        _jobStartFeedback.value = active
+        _selectedTab.value = MyWorkTab.IN_PROGRESS
+        return active
+    }
+
     fun startJob(workOrder: WorkOrderEntity) {
         viewModelScope.launch {
-            val active = confirmationRepo.startJob(
-                workOrder = workOrder.orderNumber,
-                equipmentId = workOrder.equipmentId,
-                equipmentName = "VIBRATING GRIZZLY 121SC008",
-                functionalLocation = "BI-PLN-CRU/CRS-003",
-                workCenter = workOrder.workCenter,
-                technicianId = workOrder.assignedTechnician.ifBlank { "A. Sawadogo" }
-            )
-            _jobStartFeedback.value = active
-            _selectedTab.value = MyWorkTab.IN_PROGRESS
+            startJobSync(workOrder)
         }
     }
 

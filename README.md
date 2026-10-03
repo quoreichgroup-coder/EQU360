@@ -1,237 +1,214 @@
-# PlantCare AI — Industrial Equipment Scan & Equipment 360°
+# PlantCare AI — Industrial Maintenance Intelligence & Field Operations
 
-**PlantCare AI** is a mobile maintenance intelligence application built for plant technicians and maintenance engineers in heavy industrial environments (crushing, screening, grinding, and material handling plants).
+[![Android Build](https://img.shields.io/badge/Android-APK%20Ready-success.svg)](app/build/outputs/apk/debug/app-debug.apk)
+[![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose%20M3-blue.svg)]()
+[![Room Database](https://img.shields.io/badge/Storage-Room%20(SQLite)%20Offline--First-orange.svg)]()
+[![Architecture](https://img.shields.io/badge/Architecture-Repository%20Pattern%20%2B%20Clean%20MVVM-brightgreen.svg)]()
+
+**PlantCare AI** est une application mobile d'intelligence de maintenance industrielle conçue pour les techniciens et ingénieurs de maintenance sur site dans les environnements industriels lourds (installations de concassage, criblage, broyage et manutention de minerais).
+
+L'application combine une architecture **100% Hors-Ligne (Offline-First)** avec persistance locale **Room Database**, le scan ultra-rapide de tags d'équipements (QR/codes-barres), une vue globale **Equipment 360°**, le module d'activités **"My Work"**, la **confirmation d'intervention terrain (Job Confirmation)** en 30 à 60 secondes, et une assistance de diagnostic visuel par IA.
 
 ---
 
-## 1. System Architecture & DataRepository Pattern
+## Sommaire / Table of Contents
 
-PlantCare AI employs a Clean Architecture and **DataRepository Pattern** that fully abstracts local **Room Database (SQLite)** access from the Jetpack Compose UI layer.
+1. [Génération & Téléchargement de l'APK (Build Instructions)](#1-génération--téléchargement-de-lapk-build-instructions)
+2. [Architecture Système & Pattern Repository](#2-architecture-système--pattern-repository)
+3. [Module « My Work » (Activités & Ordres de Travail)](#3-module--my-work--activités--ordres-de-travail)
+4. [Module « Job Confirmation » (Confirmation d'Intervention Terrain)](#4-module--job-confirmation--confirmation-dintervention-terrain)
+5. [Equipment 360° & Scan Industriel](#5-equipment-360--scan-industriel)
+6. [Inspection Visuelle & Diagnostic IA](#6-inspection-visuelle--diagnostic-ia)
+7. [Équipements & Données Pré-chargées](#7-équipements--données-pré-chargées)
+8. [Validation & Tests Unitaires (Robolectric)](#8-validation--tests-unitaires-robolectric)
 
-### Layer Diagram
+---
 
-```text
-┌────────────────────────────────────────────────────────┐
-│               Jetpack Compose UI Layer                 │
-│  DashboardScreen  •  ScannerScreen  • Equipment360Screen│
-└───────────────────────────▲────────────────────────────┘
-                            │ (StateFlow / UI Events)
-┌───────────────────────────┴────────────────────────────┐
-│                  ViewModel Layer                       │
-│              Equipment360ViewModel                     │
-└───────────────────────────▲────────────────────────────┘
-                            │ (Domain Flows & Coroutines)
-┌───────────────────────────┴────────────────────────────┐
-│             DataRepository Abstraction                 │
-│        IEquipmentRepository (Contract Interface)       │
-│        EquipmentRepository (Offline-First Impl)        │
-└───────────────────────────▲────────────────────────────┘
-                            │ (Dispatched on Dispatchers.IO)
-┌───────────────────────────┴────────────────────────────┐
-│                   Room Local Database                  │
-│   AppDatabase  •  EquipmentDao  •  WorkOrderDao        │
-│   MaintenanceNotificationDao    •  InspectionDao       │
-│   MaintenancePlanDao            •  DowntimeDao         │
-│   MaterialConsumptionDao        •  TechnicalDocDao     │
-└────────────────────────────────────────────────────────┘
+## 1. Génération & Téléchargement de l'APK (Build Instructions)
+
+### Emplacement de l'APK généré
+L'APK debug est compilé et prêt à l'emploi aux chemins suivants :
+- **Chemin Gradle standard** : `app/build/outputs/apk/debug/app-debug.apk`
+- **Artefact AI Studio** : `.build-outputs/app-debug.apk`
+- **Taille** : ~26 Mo
+- **Compatibilité** : Android 8.0+ (API level 26 et supérieur)
+
+### Commandes de compilation Gradle
+Pour compiler ou re-générer l'APK dans votre environnement :
+
+```bash
+# Compilation complète de l'APK Debug
+gradle assembleDebug
+
+# Compilation et exécution de tous les tests unitaires
+gradle :app:testDebugUnitTest
+
+# Vérification rapide de compilation
+gradle compileDebugSources
 ```
 
-### Key Repository Principles
-
-1. **Complete Database Decoupling**: The ViewModel and UI never interact with Room DAOs or SQLite statements directly. All access is mediated by `IEquipmentRepository`.
-2. **Unified Aggregate Stream (`getEquipment360`)**: The repository combines multiple Room DAO reactive flows into a single cohesive `Equipment360Data` stream, ensuring atomic, consistent updates across all sections (indicators, work orders, notifications, downtime, and spare parts).
-3. **Guaranteed Offline-First Availability**: 
-   - All equipment specifications, procedures, spare parts, and work order histories are persisted in the local Room database (`plantcare_maintenance.db`).
-   - The database is automatically pre-seeded with realistic plant data on first launch via `DemoDataSeeder`.
-   - Technicians can scan, inspect, update status, and log notifications in remote plant tunnels or pits with **zero internet connection**.
-4. **Future SAP PM/EAM Integration Ready**: The repository interface is designed so that a background sync engine can synchronize local mutations with SAP PM / Maximo REST APIs without requiring changes to the UI layer.
-
----
-
-## 2. Core Workflow
-
-```text
-┌──────────────┐     ┌──────────────────┐     ┌──────────────────┐     ┌─────────────────┐     ┌────────────────┐
-│ 1. SCAN TAG  │ ──► │ 2. IDENTIFY ASSET│ ──► │ 3. EQUIPMENT 360°│ ──► │ 4. VIEW STATUS  │ ──► │ 5. TAKE ACTION │
-│ Camera / QR  │     │ Parse ID & Lookup│     │ Master Dashboard │     │ WO, PM, History │     │ Notif / Inspect│
-└──────────────┘     └──────────────────┘     └──────────────────┘     └─────────────────┘     └────────────────┘
+### Installation sur appareil / émulateur
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-1. **Scan**: The technician points the camera at an equipment tag or selects quick-scan in the emulator.
-2. **Identify**: `QrCodeParser` extracts the clean equipment ID (e.g., `121SC008`).
-3. **Lookup**: The local repository queries the Room database for the equipment record.
-4. **Equipment 360°**: The full 360° asset maintenance view opens instantly.
-5. **Take Action**: The technician creates a notification or completes an inspection — the Equipment ID is **automatically inherited** with zero manual re-entry.
-
 ---
 
-## 3. QR Code & Barcode Parsing Specification
+## 2. Architecture Système & Pattern Repository
 
-The scanner supports multiple industrial tagging formats:
+L'application respecte rigoureusement les principes de **Clean Architecture** et de **Repository Pattern**. L'interface utilisateur Jetpack Compose et les ViewModels n'interagissent jamais directement avec les tables Room ou les requêtes SQLite.
 
-| Format Type | Example Payload | Extracted Equipment ID |
-| :--- | :--- | :--- |
-| **PlantCare Structured** | `PLANTCARE:EQUIPMENT:121SC008` | `121SC008` |
-| **Direct Serial / Raw** | `121SC008` | `121SC008` |
-| **SAP EAM Tag** | `SAP:EAM:121SC008` | `121SC008` |
-| **Asset Web URL** | `https://plantcare.ai/eq/121SC008` | `121SC008` |
-| **JSON Payload** | `{"equipmentId": "121SC008"}` | `121SC008` |
-| **Key-Value Tag** | `EQUIPMENT_ID=121SC008` | `121SC008` |
-
-If a scanned code is not found in the database, the app presents an **Equipment not found** dialog with manual search and scan-again options without crashing.
-
----
-
-## 4. Equipment 360° Features
-
-* **Equipment Master Details**: ID, Name, Functional Location (`BI-PLN-CRU/CRS-003`), Area, Criticality (`CRITICAL`, `HIGH`), Work Center (`MECHANICAL`, `ELECTRICAL`), Manufacturer (`Metso Outotec`, `FLSmidth`, `Continental`), Model, Serial Number, and Commissioning Date.
-* **Clickable Summary Indicators**:
-  * `Open WO` → Navigates to Work Orders.
-  * `Open Notifications` → Navigates to Notifications.
-  * `Next PM` → Navigates to Preventive Maintenance.
-  * `Downtime YTD` → Navigates to Downtime History.
-* **Work Orders (SAP PM Lifecycle)**: Filter by Open, In Progress, Completed, or All. Supports standard SAP statuses: `CRTD` (Created), `REL` (Released), `PCNF` (Partially Confirmed), `CNF` (Confirmed), and `TECO` (Technically Completed).
-* **Maintenance Notifications**: Create new notifications with priority, damage description, suspected cause, observations, photos, and voice note transcription.
-* **Preventive Maintenance & Interactive Checklists**: View maintenance plans, task lists, frequencies, and complete PM walkdown checklists with sign-off.
-* **Downtime Tracking**: Tracks start/end timestamps, duration, breakdown type, and calculated Total Downtime YTD.
-* **Spare Parts History (SAP MM Ready)**: Part numbers, descriptions, quantities, units, and warehouse bin locations.
-* **Technical Documents**: Access OEM manuals, general arrangement drawings, and safe work procedures.
-* **AI Diagnostics Assistant**: Context-aware industrial assistant pre-loaded with asset history, answering questions on failure modes, work orders, and maintenance strategies.
-
----
-
-## 5. AI Visual Inspection (Field Maintenance UX)
-
-The **AI Visual Inspection** workflow is streamlined to 4 simple field actions:
+### Diagramme de flux
 
 ```text
-SCAN
- ↓
-PHOTO
- ↓
-AI ANALYSIS
- ↓
-REVIEW & CONFIRM
+┌────────────────────────────────────────────────────────────────────────┐
+│                        Jetpack Compose UI Layer                        │
+│   DashboardScreen  •  MyWorkScreen  •  ConfirmWorkScreen  •  Eq360°    │
+└───────────────────────────────────▲────────────────────────────────────┘
+                                    │ (StateFlow & UI Events)
+┌───────────────────────────────────┴────────────────────────────────────┐
+│                            ViewModel Layer                             │
+│   ConfirmationViewModel  •  MyWorkViewModel  •  Equipment360ViewModel   │
+└───────────────────────────────────▲────────────────────────────────────┘
+                                    │ (Domain Flows & Coroutines)
+┌───────────────────────────────────┴────────────────────────────────────┐
+│                    DataRepository Abstraction Layer                    │
+│   • IEquipmentRepository   ──► EquipmentRepository (Equipment, WOs)   │
+│   • IConfirmationRepository ──► ConfirmationRepository (Sync & Jobs)   │
+└───────────────────────────────────▲────────────────────────────────────┘
+                                    │ (Dispatched on Dispatchers.IO)
+┌───────────────────────────────────┴────────────────────────────────────┐
+│                      Room Local Database (SQLite)                      │
+│   AppDatabase: WorkOrderDao, JobConfirmationDao, ActiveJobDao,        │
+│   EquipmentDao, MaintenanceNotificationDao, DowntimeDao, InspectionDao │
+└───────────────────────────────────▲────────────────────────────────────┘
+                                    │ (Sync Queue / Background)
+                                    ▼
+                     PlantCare API / SAP PM & EAM
 ```
 
-1. **Auto Equipment Context**: Automatically inherits Equipment ID, Name, Functional Location, Area, Criticality, and Work Center from Equipment 360° with zero manual data entry.
-2. **Simplified Camera**: Full-screen preview, shutter button, gallery picker, flashlight toggle, retake options, and quick sample field photos for emulator testing.
-3. **Optional Observation**: One-tap speech-to-text recording (`🎤 Describe what you noticed`) or optional text note. Can be bypassed directly to analysis.
-4. **Contextual AI Inference**: Blends photo, observations, open work orders, notifications, downtime history, and maintenance plans. Uses cautious language (`"Possible issue"`, `"AI observation"`) and flags safety items (`"⚠ Technician verification required"`).
-5. **Single-Screen Actionable Result**: Shows the possible issue, confidence level, AI observation, recommended checks, and a primary button to create a notification.
-6. **Human-in-the-Loop Validation**: Technician reviews and modifies all pre-filled fields before confirming creation.
-7. **Immediate 360° Sync**: Creates the maintenance notification and adds an inspection log to the local database, immediately updating Equipment 360° counters.
+### Principes Clés
+1. **Découplage absolu** : Toute modification de données (changement de statut d'OT, horodatage, confirmation de travail) transite par l'interface de repository correspondante (`IEquipmentRepository` ou `IConfirmationRepository`).
+2. **Offline-First Garanti** : Toutes les informations (OTs, confirmations, historique, pièces de rechange) sont persistées localement dans `plantcare_maintenance.db`. L'application fonctionne sans aucune perte en zone blanche (galeries souterraines, fosses de concassage).
+3. **Protection contre les doublons (Idempotence)** : Chaque confirmation génère un UUID `clientConfirmationId` persistant. Une tentative de re-synchronisation ultérieure ne génère aucun doublon côté serveur/SAP.
 
 ---
 
-## 6. UI/UX for Industrial Technicians
+## 3. Module « My Work » (Activités & Ordres de Travail)
 
-* **Glove-Friendly Touch Targets**: Minimum 48dp touch targets (`minimumInteractiveComponentSize`) across all buttons, chips, and cards.
-* **High-Contrast Outdoor Readability**: Industrial palette with deep slate surfaces (`#0F172A`, `#1E293B`), safety amber accents (`#F59E0B`), and distinct color-coded status badges.
-* **Haptic Feedback**: Vibrates on successful scan detection.
-* **Camera Permission Handling**: Graceful runtime permission flow with manual code input fallback.
+Le nouvel écran d'activités **"My Work"** remplace les listings denses de bureau par une interface mobile native optimisée pour le terrain.
+
+### Fonctionnalités Clés
+- **Filtrage par onglets d'activités** :
+  - **Today** : Ordres de travail planifiés pour le jour même.
+  - **In Progress** : Ordres actuellement entamés ou partiellement confirmés (`REL`, `PCNF`).
+  - **Upcoming** : Interventions planifiées à venir.
+  - **Waiting** : Ordres en attente de pièces ou d'arrêt machine.
+  - **Completed** : Ordres confirmés techniquement (`CNF`, `TECO`).
+- **Cartes d'OTs Terrain Complètes** :
+  - Numéro d'ordre (ex: `WO 155704`, `WO-4001928`).
+  - Badge de statut SAP (`REL`, `PCNF`, `CNF`, `TECO`).
+  - Description claire du travail (*Vibrating Grizzly Inspection*).
+  - Identifiant équipement (`121SC008`) et localisation fonctionnelle (`BI-PLN-CRU/CRS-003`).
+  - Métier et temps alloué (`Mechanical • 6.0 h`).
+- **Actions Directes « Un-Tap »** :
+  - Bouton `[ START JOB ]` : Démarre le chronométrage actif et enregistre l'heure de début réelle.
+  - Bouton `[ CONFIRM WORK ]` : Ouvre le formulaire de confirmation d'intervention pré-rempli.
+- **Bannière « CURRENT JOB » Persistante** :
+  - Carte active omniprésente avec chronomètre temps réel (`CURRENT JOB: WO 155704 • Elapsed 01:24`).
+  - Accès direct depuis le Dashboard principal ou l'écran My Work.
 
 ---
 
-## 6. Maintenance Job Confirmation (Field Execution UX)
+## 4. Module « Job Confirmation » (Confirmation d'Intervention Terrain)
 
-PlantCare AI includes a technician-first **Job Confirmation** module designed for 30–60 second field confirmations without exposing complex SAP GUI terminology:
+Conçu pour une saisie ultra-rapide en **30 à 60 secondes** directement au pied de la machine.
 
 ```text
-SELECT JOB
-   ↓
-REVIEW WORK
-   ↓
-ENTER ACTUAL EXECUTION
-   ↓
-REVIEW
-   ↓
-CONFIRM
+SÉLECTIONNER OT ──► REVOIR CONTEXTE ──► HEURES & TRAVAIL ──► STATUT ──► CONFIRMER
 ```
 
-### Key Workflow Capabilities
+### Les 5 Sections du Formulaire de Confirmation
+1. **1. Contexte OT (Lecture seule)** :
+   - Numéro d'ordre, opération (`0010`), équipement, localisation fonctionnelle et centre de travail.
+2. **2. Horodatage & Durée Écoulée** :
+   - Heure de début réelle (ex: `14:32`) & Heure de fin réelle (ex: `16:05`).
+   - **Calcul automatique du temps écoulé** (`Elapsed: 1 h 33 min`).
+3. **3. Temps de Travail Effectif (Actual Work)** :
+   - Grand pavé numérique tactile (`[ 1.5 ] [ H ]`) avec bascule instantanée Heures / Minutes.
+   - Suggestion intelligente calculée depuis le temps écoulé (`1.55 h`).
+   - **Indépendance stricte du temps de clé (Wrench Time)** : Le temps de travail réel n'est jamais écrasé automatiquement s'il diffère de la durée de présence.
+   - **Prise en charge Multi-Techniciens (Team Labor)** : Possibilité d'allouer les heures d'équipiers supplémentaires.
+4. **4. Travaux Réalisés & Preuves Terrain** :
+   - Checkboxes rapides : *Inspection completed, Lubrication completed, Adjustment performed, Component replaced, Cleaning performed*.
+   - Notes de travail avec saisie vocale simulée (🎤 Voice note dictation).
+   - Mesures physiques : Température de palier (`68 °C`), Vibrations (`4.2 mm/s`), Jeu de fonctionnement (`0.08 mm`).
+   - Pièces consommées avec ajout rapide de références de stock.
+   - Preuves photographiques : Avant, Pendant et Après intervention.
+5. **5. Statut d'Achèvement** :
+   - `OUI — Travail Terminé` : Confirmation finale SAP, statut de l'OT mis à jour automatiquement en `CNF`.
+   - `NON — Travaux Supplémentaires Requis` : Confirmation partielle (`PCNF`), sélection en un clic du motif (*Attente pièces, Outillage, Accès machine, Relève de poste*) et proposition immédiate de créer un avis de maintenance ou une observation avec héritage du contexte.
 
-1. **Activities / "MY WORK" Screen**:
-   - Filter sections: `Today`, `Upcoming`, `In Progress`, `Waiting`, `Completed`.
-   - Native mobile cards replacing dense desktop tables.
-   - Shows WO number, status badge (`REL`, `PCNF`, `CNF`), description, equipment ID, functional location, work center, and planned hours (`Mechanical • 6.0 h`).
-   - One-tap `[ START JOB ]` and `[ CONFIRM WORK ]` actions.
-
-2. **Persistent Active Job Experience**:
-   - Starting a job automatically captures **Actual Start Date & Start Time** (e.g., `14:32`).
-   - Displays a persistent active card banner across the app with live elapsed timer (`CURRENT JOB: WO 155704 • Elapsed 01:24`).
-
-3. **Confirm Work — 4 Simple Sections**:
-   - **1. Job Context (Read-Only)**: WO, Operation (`0010`), Equipment, Functional Location (`BI-PLN-CRU/CRS-003`), Work Center (`MECHANICAL`).
-   - **2. Time**:
-     - Work Start (e.g., `14:32`) & Work Finish (e.g., `16:05`).
-     - **Calculated Elapsed Time** (e.g., `1 h 33 min`).
-   - **3. Actual Work**:
-     - Large numeric input (`[ 1.5 ] [ H ]`) with H / MIN unit toggle.
-     - Helper hint: `Suggested from elapsed time: 1.55 h`.
-     - **Independent Time Concept**: Work Finish - Work Start ≠ Actual Work. Active wrench time (e.g., 3.0 h) is strictly distinguished from access window / elapsed duration (e.g., 4.0 h) and is never silently overwritten.
-     - **Team Labor Architecture**: Supports multi-technician jobs (e.g., primary tech + additional co-workers with allocated hours and total labor calculation).
-   - **4. Work Performed & Field Evidence**:
-     - Quick checkboxes: `Inspection completed`, `Lubrication completed`, `Adjustment performed`, `Component replaced`, `Cleaning performed`.
-     - `Add work note` with 🎤 voice-to-text dictation simulation.
-     - Contextual measurements: Bearing Temperature (`68 °C`), Vibration (`4.2 mm/s`), Bearing Clearance (`0.08 mm`).
-     - Materials Used: Spare parts consumption (e.g., `Bearing 6208 Qty 2`, `Grease EP2 Qty 0.5 KG`) with `[ + Add Material ]`.
-     - Photo evidence: Before, During, After photo attachments.
-   - **5. Completion**:
-     - Simple question: `IS THE JOB COMPLETE?`
-     - `YES — Work Completed` (maps to Final confirmation in SAP PM, updating WO status to `CNF`).
-     - `NO — More Work Required` (maps to Partial confirmation, with quick reason chips: *Waiting for spare parts, Additional work identified, Equipment unavailable, Specialist required, Tools unavailable, Shift ended*).
-     - Follow-up work option: `Create Notification` or `Add Observation`, inheriting asset context.
-
-4. **Compact Pre-Submission Review & Success Screens**:
-   - Summary view with explicit `[ EDIT ]` and `[ CONFIRM WORK ]` actions.
-   - Success screen confirming WO, Operation, Actual Work, and timestamp with quick navigation to `[ VIEW WORK ORDER ]` or `[ NEXT JOB ]`.
-
-5. **Clean API Architecture & Offline Sync Queue**:
-   ```text
-   Compose UI ──► ConfirmationViewModel ──► ConfirmationRepository ──► Room DB (Local)
-                                                                            │
-                                                       (Sync Queue) ────────┘
-                                                            ▼
-                                                 PlantCare API Contract (POST /api/v1/confirmations)
-                                                            ▼
-                                                       SAP PM / EAM
-   ```
-   - **Idempotency Protection**: Uses device-generated `clientConfirmationId` (UUID) to prevent accidental duplicate confirmations.
-   - **Sync States**: `DRAFT`, `PENDING_SYNC` (*"Saved on device • Waiting to sync"*), `SYNCING`, `SYNCED`, `SYNC_FAILED` (*"Sync issue • Your confirmation is safely stored on this device [ Retry ]"*).
-   - **Confirmation History**: Displayed on Equipment 360° and Work Order Detail screens.
+### File de synchronisation (Sync Queue)
+- Statuts de confirmation : `DRAFT`, `PENDING_SYNC`, `SYNCING`, `SYNCED`, `SYNC_FAILED`.
+- Indicateurs visuels clairs informant le technicien que ses données sont sécurisées sur l'appareil.
 
 ---
 
-## 7. Pre-seeded Industrial Equipment
+## 5. Equipment 360° & Scan Industriel
 
-* `121SC008` — Vibrating Grizzly Feeder Screen (Scalping) — Includes `WO 155704` (REL, Planned 6.0 h)
-* `CRU01` — Superior MKIII Gyratory Primary Crusher
-* `AF01` — Heavy Duty Apron Feeder
-* `CV04` — Overland Belt Conveyor 1200mm
-* `CV05C` — Reclaim Conveyor EP-800
-* `CV06A` — Mill Feed Conveyor A with Tripper
-* `CV06B` — Mill Feed Conveyor B
+- **Scanner Polyvalent** : Reconnaissance automatique des codes QR, DataMatrix, codes-barres 1D et tags industriels structurés :
+  - `PLANTCARE:EQUIPMENT:121SC008`
+  - `SAP:EAM:121SC008`
+  - URL Web d'actif (`https://plantcare.ai/eq/121SC008`)
+  - Format JSON (`{"equipmentId": "121SC008"}`)
+- **Fiche 360° Complète** :
+  - Spécifications techniques complètes, criticité, fabricant et modèle.
+  - Compteurs cliquables : Ordres ouverts, Avis en cours, Prochaine maintenance préventive, Taux d'arrêt annuel (Downtime YTD).
+  - Historique des consommations de pièces détachées et documentation technique constructeur.
 
 ---
 
-## 8. Testing & Verification
+## 6. Inspection Visuelle & Diagnostic IA
 
-Unit and local JVM tests executed with **Robolectric**:
+- Workflow rapide en 4 étapes : *Scan → Photo → Analyse IA → Confirmation*.
+- Inférence contextuelle alimentée par modèle d'IA prenant en compte l'historique complet de l'équipement.
+- Détection des anomalies critiques (fuite hydraulique, usure de garniture, surchauffe palier) avec recommandations d'actions immédiates.
+- Génération automatique d'avis de maintenance pré-remplis avec photos et observations.
 
-* `ConfirmationValidationTest`: Validates required fields, work order presence, operation format, and non-negative actual work.
-* `ElapsedTimeCalculationTest`: Validates elapsed calculations (14:32 → 16:05 = 93 min, 08:00 → 12:00 = 240 min).
-* `ActualWorkIndependenceTest`: Validates that `Work Start = 08:00, Work Finish = 12:00 (Elapsed = 4.0h), Actual Work = 3.0h` is accepted and preserved without silent overwrite.
-* `OfflineConfirmationTest`: Validates that offline submissions succeed locally, store with `PENDING_SYNC`, update WO to `CNF`, and clear active jobs.
-* `ConfirmationSyncTest`: Validates queued record synchronization when connectivity is restored, updating status to `SYNCED` with remote SAP ID.
-* `DuplicateConfirmationTest`: Validates idempotency protection using `clientConfirmationId`.
-* `JobConfirmationEndToEndTest`: Validates full Critical User Journey (CUJ) online and offline.
-* `QrCodeParserTest`: Validates parsing of structured tags, URLs, JSON, and raw barcodes.
-* `EquipmentLookupTest`: Validates Room in-memory database queries and `getEquipment360` aggregation.
-* `VisualInspectionTest`: Validates AI visual inspection pipeline and fault inference.
+---
 
-Run tests:
+## 7. Équipements & Données Pré-chargées
+
+L'application embarque un jeu complet de données industrielles réalistes :
+- **`121SC008`** — Vibrating Grizzly Feeder Screen (Scalping) — Inclut l'OT **`WO 155704`** (REL, Mechanical • 6.0 h).
+- **`CRU01`** — Superior MKIII Gyratory Primary Crusher.
+- **`AF01`** — Heavy Duty Apron Feeder.
+- **`CV04`** — Overland Belt Conveyor 1200mm.
+- **`CV05C`** — Reclaim Conveyor EP-800.
+- **`CV06A`** — Mill Feed Conveyor A with Tripper.
+- **`CV06B`** — Mill Feed Conveyor B.
+
+---
+
+## 8. Validation & Tests Unitaires (Robolectric)
+
+La suite de tests automatisée valide la totalité des parcours critiques (Critical User Journeys) :
+
+| Classe de Test | Périmètre Validé |
+| :--- | :--- |
+| `ConfirmationValidationTest` | Validation des champs obligatoires, formats d'opérations et valeurs positives. |
+| `ElapsedTimeCalculationTest` | Calcul précis des durées écoulées (`14:32 ➔ 16:05 = 93 min`). |
+| `ActualWorkIndependenceTest` | Non-écrasement du temps de clé (`08:00-12:00 = 4h`, réel = `3h` préservé). |
+| `OfflineConfirmationTest` | Enregistrement local hors-ligne, mise à jour OT en `CNF`, archivage du job actif. |
+| `ConfirmationSyncTest` | Vidage de file d'attente à la reconnexion et affectation du remote ID SAP. |
+| `DuplicateConfirmationTest` | Déduplication idempotente via `clientConfirmationId` (UUID). |
+| `JobConfirmationEndToEndTest` | Parcours complet de confirmation de bout en bout en local. |
+| `QrCodeParserTest` | Décodage et tolérance de tous les formats de tags d'actifs. |
+| `EquipmentLookupTest` | Requêtes Room in-memory et agrégation unifiée `getEquipment360`. |
+| `VisualInspectionTest` | Pipeline d'inspection visuelle et création d'avis. |
+
+Exécuter la suite :
 ```bash
 gradle :app:testDebugUnitTest
 ```
-

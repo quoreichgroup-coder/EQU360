@@ -41,7 +41,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -933,7 +933,7 @@ fun ReviewScreen(
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
-                Divider(color = Slate700)
+                HorizontalDivider(color = Slate700)
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // Time Breakdown
@@ -980,7 +980,7 @@ fun ReviewScreen(
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
-                Divider(color = Slate700)
+                HorizontalDivider(color = Slate700)
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // Work Completed summary
@@ -996,7 +996,7 @@ fun ReviewScreen(
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
-                Divider(color = Slate700)
+                HorizontalDivider(color = Slate700)
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // Result status

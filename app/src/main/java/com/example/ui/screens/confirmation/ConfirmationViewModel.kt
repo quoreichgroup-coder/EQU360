@@ -281,63 +281,68 @@ class ConfirmationViewModel(
         _uiState.update { it.copy(isReviewMode = enabled, errorMessage = null) }
     }
 
-    fun submitConfirmation() {
+    suspend fun submitConfirmationAndWait(): Result<JobConfirmationEntity> {
         val state = _uiState.value
         val actualWorkVal = state.actualWorkInput.toDoubleOrNull() ?: 0.0
 
         if (actualWorkVal < 0) {
             _uiState.update { it.copy(errorMessage = "Actual work cannot be negative.") }
-            return
+            return Result.failure(IllegalArgumentException("Actual work cannot be negative."))
         }
 
         _uiState.update { it.copy(isSubmitting = true, errorMessage = null) }
 
-        viewModelScope.launch {
-            val measurementsSummary = state.measurements.joinToString("; ") { "${it.name}: ${it.value} ${it.unit}" }
-            val materialsSummary = state.materialsUsed.joinToString("; ") { "${it.description} Qty ${it.quantity} ${it.unit}" }
-            val performedFlags = state.performedTasks.joinToString(";")
+        val measurementsSummary = state.measurements.joinToString("; ") { "${it.name}: ${it.value} ${it.unit}" }
+        val materialsSummary = state.materialsUsed.joinToString("; ") { "${it.description} Qty ${it.quantity} ${it.unit}" }
+        val performedFlags = state.performedTasks.joinToString(";")
 
-            val confirmation = JobConfirmationEntity(
-                clientConfirmationId = UUID.randomUUID().toString(),
-                workOrder = state.workOrder,
-                operation = state.operation,
-                equipmentId = state.equipmentId,
-                equipmentName = state.equipmentName,
-                functionalLocation = state.functionalLocation,
-                workCenter = state.workCenter,
-                technicianId = state.technicianId,
-                workStart = "${state.workStartDate}T${state.workStartTime}",
-                workFinish = "${state.workFinishDate}T${state.workFinishTime}",
-                elapsedMinutes = state.elapsedMinutes,
-                actualWork = actualWorkVal,
-                actualWorkUnit = state.actualWorkUnit,
-                completionType = if (state.isJobComplete) JobCompletionType.FINAL.name else JobCompletionType.PARTIAL.name,
-                incompleteReason = if (!state.isJobComplete) state.incompleteReason else null,
-                incompleteNotes = if (!state.isJobComplete) state.incompleteNotes else null,
-                workNote = state.workNote,
-                workPerformedFlags = performedFlags,
-                measurementsJson = measurementsSummary,
-                materialsJson = materialsSummary
-            )
+        val confirmation = JobConfirmationEntity(
+            clientConfirmationId = UUID.randomUUID().toString(),
+            workOrder = state.workOrder,
+            operation = state.operation,
+            equipmentId = state.equipmentId,
+            equipmentName = state.equipmentName,
+            functionalLocation = state.functionalLocation,
+            workCenter = state.workCenter,
+            technicianId = state.technicianId,
+            workStart = "${state.workStartDate}T${state.workStartTime}",
+            workFinish = "${state.workFinishDate}T${state.workFinishTime}",
+            elapsedMinutes = state.elapsedMinutes,
+            actualWork = actualWorkVal,
+            actualWorkUnit = state.actualWorkUnit,
+            completionType = if (state.isJobComplete) JobCompletionType.FINAL.name else JobCompletionType.PARTIAL.name,
+            incompleteReason = if (!state.isJobComplete) state.incompleteReason else null,
+            incompleteNotes = if (!state.isJobComplete) state.incompleteNotes else null,
+            workNote = state.workNote,
+            workPerformedFlags = performedFlags,
+            measurementsJson = measurementsSummary,
+            materialsJson = materialsSummary
+        )
 
-            val result = confirmationRepository.submitConfirmation(confirmation)
-            if (result.isSuccess) {
-                val saved = result.getOrThrow()
-                _uiState.update {
-                    it.copy(
-                        isSubmitting = false,
-                        isSuccess = true,
-                        submittedResult = saved
-                    )
-                }
-            } else {
-                _uiState.update {
-                    it.copy(
-                        isSubmitting = false,
-                        errorMessage = result.exceptionOrNull()?.message ?: "Confirmation failed"
-                    )
-                }
+        val result = confirmationRepository.submitConfirmation(confirmation)
+        if (result.isSuccess) {
+            val saved = result.getOrThrow()
+            _uiState.update {
+                it.copy(
+                    isSubmitting = false,
+                    isSuccess = true,
+                    submittedResult = saved
+                )
             }
+        } else {
+            _uiState.update {
+                it.copy(
+                    isSubmitting = false,
+                    errorMessage = result.exceptionOrNull()?.message ?: "Confirmation failed"
+                )
+            }
+        }
+        return result
+    }
+
+    fun submitConfirmation() {
+        viewModelScope.launch {
+            submitConfirmationAndWait()
         }
     }
 

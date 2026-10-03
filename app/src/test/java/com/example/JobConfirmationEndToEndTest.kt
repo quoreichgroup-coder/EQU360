@@ -57,7 +57,7 @@ class JobConfirmationEndToEndTest {
         assertEquals("REL", targetWo.status)
 
         // 2. Start Job
-        myWorkVm.startJob(targetWo)
+        myWorkVm.startJobSync(targetWo)
         val activeJob = confirmationRepo.getActiveJobSync()
         assertNotNull(activeJob)
         assertEquals("WO 155704", activeJob?.workOrder)
@@ -89,7 +89,7 @@ class JobConfirmationEndToEndTest {
         assertTrue(confirmVm.uiState.value.isReviewMode)
 
         // 9. Confirm & Save -> Sync API
-        confirmVm.submitConfirmation()
+        confirmVm.submitConfirmationAndWait()
         val finalState = confirmVm.uiState.value
         assertTrue(finalState.isSuccess)
         assertNotNull(finalState.submittedResult)
@@ -123,7 +123,7 @@ class JobConfirmationEndToEndTest {
 
         confirmVm.setJobComplete(true)
         confirmVm.setReviewMode(true)
-        confirmVm.submitConfirmation()
+        confirmVm.submitConfirmationAndWait()
 
         val finalState = confirmVm.uiState.value
         assertTrue(finalState.isSuccess)
