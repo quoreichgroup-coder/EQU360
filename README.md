@@ -28,6 +28,7 @@ L'application combine une architecture **100% Hors-Ligne (Offline-First)** avec 
 
 ### Emplacement de l'APK généré
 L'APK debug est compilé et prêt à l'emploi aux chemins suivants :
+- **Version prête pour Git (incluse dans le repository)** : `release/plantcare-ai-debug.apk`
 - **Chemin Gradle standard** : `app/build/outputs/apk/debug/app-debug.apk`
 - **Artefact AI Studio** : `.build-outputs/app-debug.apk`
 - **Taille** : ~26 Mo
